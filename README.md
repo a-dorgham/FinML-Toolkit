@@ -149,7 +149,7 @@ from ml_toolkit.visualizer import Visualizer
 
 ## 📊 Model Output
 
-Sample output from the notebook:
+Sample output from the notebook (note that predictions for M15 are far better than H4):
 - **Correlation maps visualization**
 ![image](https://github.com/user-attachments/assets/d9911ef7-f1e9-491c-9a59-f8277fc8077b)
 
@@ -189,6 +189,7 @@ Sample output from the notebook:
 
 - Custom indicators must be added manually.
 - Optimization methods may need tuning.
+- Predictions for shorter time scales, e.g. M15, are far better than longer time scales, e.g. H4.
 
 ---
 
