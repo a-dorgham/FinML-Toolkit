@@ -143,33 +143,38 @@ from ml_toolkit.visualizer import Visualizer
 - `Imbalanced_Dataset_Evaluation.ipynb`
 - `Correlation_Heatmap_Visualization.ipynb`
 - `Peak_Detection_Visualization.ipynb`
+- `Trades_Evaluation.ipynb`
 
 ---
 
 ## 📊 Model Output
 
 Sample output from the notebook:
-- Correlation maps visualization
+- **Correlation maps visualization**
 ![image](https://github.com/user-attachments/assets/d9911ef7-f1e9-491c-9a59-f8277fc8077b)
 
-- Peaks detection
+- **Peaks detection**
 <img width="1014" alt="image" src="https://github.com/user-attachments/assets/76be0ad1-5909-491b-bad1-ccf9543d1612" />
 
 
-- Actual vs predicted signals
+- **Actual vs predicted signals**
   <img width="1063" alt="image" src="https://github.com/user-attachments/assets/0243a962-fa84-4146-a5ef-9f21c6ea4193" />
 
-- Class classification
+- **Class classification**
   <img width="1132" alt="image" src="https://github.com/user-attachments/assets/a5aa9858-df13-431b-855e-283af5cb031d" />
 
-- Confusion matrix
+- **Confusion matrix**
 <img width="1132" alt="image" src="https://github.com/user-attachments/assets/6526c7b8-913c-4848-bcbb-6b55ad2f4ccb" />
 
-- Debugging report
+- **Debugging report**
 <img width="1131" alt="image" src="https://github.com/user-attachments/assets/76d91977-adfd-45ce-a492-255830224eae" />
 
+- **Trades log**
+<img width="743" alt="image" src="https://github.com/user-attachments/assets/15a882e1-a286-4b18-9115-7dbdb4ee2ef3" />
 
-- 
+- **Trades metrics**
+<img width="880" alt="image" src="https://github.com/user-attachments/assets/69fa8290-6fbf-4be9-ab1e-47b505ec0043" />
+
 ---
 
 ## 🛠 Developer Notes
