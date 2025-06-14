@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)
 ![TensorFlow](https://img.shields.io/badge/Deep%20Learning-TensorFlow-orange?logo=tensorflow)
 ![Plotly](https://img.shields.io/badge/Visualization-Plotly-darkorange?logo=plotly)
-![License](https://img.shields.io/github/license/a-dorgham/FinML-Toolkit?color=blue)
+![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 ![Contributions](https://img.shields.io/badge/Contributions-Welcome-ff69b4)
 
@@ -148,10 +148,28 @@ from ml_toolkit.visualizer import Visualizer
 
 ## 📊 Model Output
 
-Here's a sample output from the notebook:
+Sample output from the notebook:
+- Correlation maps visualization
+![image](https://github.com/user-attachments/assets/d9911ef7-f1e9-491c-9a59-f8277fc8077b)
 
-![Plot](images/simple_plot.png)
+- Peaks detection
+<img width="1014" alt="image" src="https://github.com/user-attachments/assets/76be0ad1-5909-491b-bad1-ccf9543d1612" />
 
+
+- Actual vs predicted signals
+  <img width="1063" alt="image" src="https://github.com/user-attachments/assets/0243a962-fa84-4146-a5ef-9f21c6ea4193" />
+
+- Class classification
+  <img width="1132" alt="image" src="https://github.com/user-attachments/assets/a5aa9858-df13-431b-855e-283af5cb031d" />
+
+- Confusion matrix
+<img width="1132" alt="image" src="https://github.com/user-attachments/assets/6526c7b8-913c-4848-bcbb-6b55ad2f4ccb" />
+
+- Debugging report
+<img width="1131" alt="image" src="https://github.com/user-attachments/assets/76d91977-adfd-45ce-a492-255830224eae" />
+
+
+- 
 ---
 
 ## 🛠 Developer Notes
