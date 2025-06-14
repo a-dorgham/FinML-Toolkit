@@ -189,7 +189,7 @@ Sample output from the notebook (note that predictions for M15 are far better th
 
 - Custom indicators must be added manually.
 - Optimization methods may need tuning.
-- Predictions for shorter time scales, e.g. M15, are far better than longer time scales, e.g. H4.
+- Predictions at shorter time scales, e.g. M15, are far better than those at longer time scales, e.g. H4.
 
 ---
 
