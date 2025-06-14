@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.graph_objects as go
-from typing import Tuple, List, Optional, Union, Any
+from typing import Tuple, List, Optional, Union, Dict, Any
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report, confusion_matrix
 from collections import Counter
@@ -809,4 +809,140 @@ class Visualizer:
         except Exception as e:
             ErrorHandler.handle_error(e, "Failed to generate debug report")
 
+
+    @staticmethod
+    def plot_trades_metrics(trade_log: pd.DataFrame, metrics: Dict[str, float]) -> Dict[str, Union[float, pd.Series]]:
+        """
+        Calculates additional trading metrics and visualizes key performance indicators.
+
+        This function generates several Matplotlib plots to visually represent the
+        trading strategy's performance, including accumulated profit, daily P&L,
+        drawdown, and profit/loss distribution. It also computes and displays
+        extended metrics like win rate and maximum drawdown.
+
+        Args:
+            trade_log (pd.DataFrame): DataFrame containing details of all trades.
+                Expected columns: ['Entry Date', 'Entry Price', 'Exit Date', 'Exit Price', 'Profit'].
+            metrics (dict): Dictionary of initial calculated metrics from `process_signals`.
+                Expected keys: "Total Profit", "Sharpe Ratio (Per Trade)", "Total Trades".
+
+        Returns:
+            Dict[str, Union[float, pd.Series]]: A dictionary containing all calculated metrics,
+                                                including newly computed ones.
+
+        Raises:
+            MLToolkitError: If `trade_log` is invalid or missing required columns,
+                            or if metric calculation/visualization fails.
+        """
+        try:
+            required_columns = ['Entry Date', 'Entry Price', 'Exit Date', 'Exit Price', 'Profit']
+            ErrorHandler.validate_dataframe(trade_log, required_columns)
+            
+            # Ensure trade_log has datetime format for date-related calculations
+            trade_log_copy = trade_log.copy()
+            trade_log_copy['Entry Date'] = pd.to_datetime(trade_log_copy['Entry Date'])
+            trade_log_copy['Exit Date'] = pd.to_datetime(trade_log_copy['Exit Date'])
+            
+            if trade_log_copy.empty:
+                print("Warning: trade_log is empty. No metrics or plots can be generated.")
+                return metrics 
+
+            # Calculate accumulated profit
+            trade_log_copy['Accumulated Profit'] = trade_log_copy['Profit'].cumsum()
+            
+            # Calculate daily profits/losses
+            trade_log_copy['Exit Day'] = trade_log_copy['Exit Date'].dt.date
+            min_date = trade_log_copy['Exit Day'].min()
+            max_date = trade_log_copy['Exit Day'].max()
+            all_dates = pd.date_range(start=min_date, end=max_date, freq='D').date
+            daily_pnl = trade_log_copy.groupby('Exit Day')['Profit'].sum().reindex(all_dates, fill_value=0)
+            
+            # Calculate drawdown, peak equity
+            trade_log_copy['Peak Equity'] = trade_log_copy['Accumulated Profit'].cummax()
+            trade_log_copy['Drawdown'] = trade_log_copy['Accumulated Profit'] - trade_log_copy['Peak Equity']
+            max_drawdown = trade_log_copy['Drawdown'].min()
+            
+            # Calculate win rate
+            win_rate = (trade_log_copy['Profit'] > 0).mean() * 100 if not trade_log_copy.empty else 0
+            
+            # Metrics visualization
+            fig, axs = plt.subplots(3, 2, figsize=(15, 15))
+            fig.tight_layout(pad=5.0)
+
+            # Accumulated Profit Plot
+            axs[0, 0].plot(trade_log_copy['Exit Date'], trade_log_copy['Accumulated Profit'], label="Accumulated Profit", color='green', linewidth=1.5)
+            axs[0, 0].set_title("Accumulated Profit Over Time")
+            axs[0, 0].set_xlabel("Date")
+            axs[0, 0].set_ylabel("Profit")
+            axs[0, 0].grid(True, linestyle='--', alpha=0.7)
+            axs[0, 0].legend()
+
+            # Daily Profit/Losses Plot
+            axs[0, 1].bar(daily_pnl.index, daily_pnl.values, color=np.where(daily_pnl.values >= 0, 'skyblue', 'lightcoral'), label="Daily P&L")
+            axs[0, 1].set_title("Daily Profits and Losses")
+            axs[0, 1].set_xlabel("Date")
+            axs[0, 1].set_ylabel("Profit/Loss")
+            axs[0, 1].grid(True, linestyle='--', alpha=0.7)
+            axs[0, 1].legend()
+            fig.autofmt_xdate() 
+
+            # Drawdown Plot
+            axs[1, 0].plot(trade_log_copy['Exit Date'], trade_log_copy['Drawdown'], label="Drawdown", color='red', linewidth=1.5)
+            axs[1, 0].fill_between(trade_log_copy['Exit Date'], trade_log_copy['Drawdown'], 0, color='red', alpha=0.2)
+            axs[1, 0].set_title("Drawdown Over Time")
+            axs[1, 0].set_xlabel("Date")
+            axs[1, 0].set_ylabel("Drawdown")
+            axs[1, 0].grid(True, linestyle='--', alpha=0.7)
+            axs[1, 0].legend()
+
+            # Profit/Loss Per Trade Plot
+            colors = np.where(trade_log_copy['Profit'] >= 0, 'mediumseagreen', 'crimson')
+            axs[1, 1].bar(trade_log_copy.index, trade_log_copy['Profit'], color=colors, label="Profit/Loss per Trade")
+            axs[1, 1].set_title("Profit/Loss Per Trade")
+            axs[1, 1].set_xlabel("Trade Index")
+            axs[1, 1].set_ylabel("Profit/Loss")
+            axs[1, 1].grid(True, linestyle='--', alpha=0.7)
+            axs[1, 1].legend()
+
+            # Histogram of Profits/Losses
+            axs[2, 0].hist(trade_log_copy['Profit'], bins=20, color='royalblue', edgecolor='black', alpha=0.8, label="Profit/Loss Distribution")
+            axs[2, 0].set_title("Profit/Loss Distribution")
+            axs[2, 0].set_xlabel("Profit/Loss")
+            axs[2, 0].set_ylabel("Frequency")
+            axs[2, 0].grid(True, linestyle='--', alpha=0.7)
+            axs[2, 0].legend()
+
+            # Sharpe Ratio and Metrics Text
+            axs[2, 1].axis('off') 
+            
+            # Retrieve metrics with default values if not present
+            total_profit = metrics.get("Total Profit", 0)
+            sharpe_ratio_per_trade = metrics.get("Sharpe Ratio (Per Trade)", 0)
+            total_trades = metrics.get("Total Trades", 0)
+
+            metrics_text = f"""
+            **Key Trading Metrics:**
+            - Total Profit: **${total_profit:,.2f}**
+            - Total Trades: **{total_trades}**
+            - Win Rate: **{win_rate:.2f}%**
+            - Max Drawdown: **${max_drawdown:,.2f}**
+            - Sharpe Ratio (Per Trade): **{sharpe_ratio_per_trade:.2f}**
+            """
+            axs[2, 1].text(0.5, 0.5, metrics_text, fontsize=12, verticalalignment='center', horizontalalignment='center',
+                           transform=axs[2, 1].transAxes, bbox=dict(boxstyle="round,pad=0.5", fc="wheat", ec="gray", lw=1, alpha=0.6))
+
+            plt.show()
+
+            # Extended metrics dictionary
+            extended_metrics = metrics.copy()
+            extended_metrics.update({
+                "Win Rate (%)": win_rate,
+                "Max Drawdown": max_drawdown,
+                "Daily Profits/Losses (Series)": daily_pnl 
+            })
+            
+            return extended_metrics
+
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Failed to calculate and visualize trading metrics")
 

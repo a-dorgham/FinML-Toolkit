@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf # Assuming tensorflow.keras.Model is used
 from datetime import timedelta
-from typing import Tuple
+from typing import Tuple, Dict
 
 # Assuming ErrorHandler and MLToolkitError are defined in ml_toolkit/error_handler.py
 from ml_toolkit.error_handler import ErrorHandler
@@ -104,3 +104,154 @@ class ModelForecaster:
 
         except Exception as e:
             ErrorHandler.handle_error(e, "Failed to perform LSTM forecasting")
+            
+
+
+    @staticmethod
+    def process_signals(df: pd.DataFrame, threshold: int = 10) -> Tuple[pd.DataFrame, Dict[str, float]]:
+        """
+        Process predicted signals ('y_pred' column) in a DataFrame to identify trades,
+        calculate profit, and derive performance metrics.
+
+        This function simulates a simple trading strategy where a trade is opened
+        if a 'Buy' (0) or 'Sell' (2) signal is maintained for a 'threshold' number
+        of consecutive periods. Trades are closed when an opposite signal or a neutral (1)
+        signal occurs.
+
+        Args:
+            df (pd.DataFrame): DataFrame expected to contain at least the following columns:
+                - 'y_pred': Predicted signal (0=Buy, 1=Neutral, 2=Sell).
+                - 'Time': Timestamp of the price data (datetime type).
+                - 'Close': The closing price at the given timestamp.
+            threshold (int): The minimum number of consecutive identical signals required
+                             to open a trade. Defaults to 10.
+
+        Returns:
+            Tuple[pd.DataFrame, Dict[str, float]]:
+                - trade_log (pd.DataFrame): DataFrame detailing all simulated trades,
+                                            including entry/exit times/prices, profit, and direction.
+                - metrics (dict): Dictionary of accumulated strategy performance metrics:
+                                  "Total Profit", "Sharpe Ratio", "Total Trades".
+
+        Raises:
+            MLToolkitError: If required columns are missing, DataFrame is empty,
+                            or inputs are invalid.
+            ValueError: If 'threshold' is not a positive integer.
+        """
+        try:
+            required_columns = ['y_pred', 'Time', 'Close']
+            ErrorHandler.validate_dataframe(df, required_columns)
+
+            if not pd.api.types.is_datetime64_any_dtype(df['Time']):
+                df['Time'] = pd.to_datetime(df['Time'])
+
+            if not isinstance(threshold, int) or threshold <= 0:
+                raise ValueError("Threshold must be a positive integer.")
+
+            # Initialize variables
+            potential_signals_buffer = [] # Buffer to store consecutive signals
+            is_open_trade = False
+            trade_direction = None # Store 0 for Buy, 2 for Sell
+            entry_price = None
+            entry_time = None
+            
+            trades = []  # List to hold trade details
+            profits = []  # For Sharpe ratio calculation
+
+            for i in range(len(df)):
+                current_signal = df['y_pred'].iloc[i]
+                current_price = df['Close'].iloc[i]
+                current_time = df['Time'].iloc[i]
+
+                # Skip neutral signals unless a trade is open
+                if current_signal == 1:
+                    if is_open_trade: 
+                        exit_price = current_price
+                        exit_time = current_time
+                        profit = (exit_price - entry_price) if trade_direction == 0 else (entry_price - exit_price)
+                        profits.append(profit)
+                        trades.append({
+                            "Entry Date": entry_time,
+                            "Entry Price": entry_price,
+                            "Exit Date": exit_time,
+                            "Exit Price": exit_price,
+                            "Profit": profit,
+                            "Direction": "Buy" if trade_direction == 0 else "Sell",
+                            "Exit Reason": "Neutral Signal"
+                        })
+                        # Reset for next trade
+                        is_open_trade = False
+                        entry_price = None
+                        entry_time = None
+                        trade_direction = None
+                    potential_signals_buffer = [] 
+                    continue
+
+                # If no trade is open
+                if not is_open_trade:
+                    if not potential_signals_buffer:
+                        potential_signals_buffer.append(current_signal)
+                    elif current_signal == potential_signals_buffer[-1]:
+                        potential_signals_buffer.append(current_signal)
+                        if len(potential_signals_buffer) >= threshold:
+                            # Open trade
+                            entry_price = current_price
+                            entry_time = current_time
+                            trade_direction = current_signal 
+                            is_open_trade = True
+                            potential_signals_buffer = [] 
+                    else: 
+                        potential_signals_buffer = [current_signal]
+                
+                # If a trade is open, check for closing conditions
+                else: 
+                    if current_signal != trade_direction:
+                        exit_price = current_price
+                        exit_time = current_time
+                        profit = (exit_price - entry_price) if trade_direction == 0 else (entry_price - exit_price)
+                        profits.append(profit)
+                        trades.append({
+                            "Entry Date": entry_time,
+                            "Entry Price": entry_price,
+                            "Exit Date": exit_time,
+                            "Exit Price": exit_price,
+                            "Profit": profit,
+                            "Direction": "Buy" if trade_direction == 0 else "Sell",
+                            "Exit Reason": "Opposite Signal"
+                        })
+                        # Reset for next trade and start new potential sequence
+                        is_open_trade = False
+                        entry_price = None
+                        entry_time = None
+                        trade_direction = None
+                        potential_signals_buffer = [current_signal] 
+
+            # Handle open trade at the end of the DataFrame
+            if is_open_trade:
+                print("Warning: Trade was still open at the end of the data. Not included in trade_log.")
+
+            # Create trade log DataFrame
+            trade_log = pd.DataFrame(trades)
+
+            # Calculate metrics
+            total_profit = np.sum(profits) if profits else 0
+            mean_profit_per_trade = np.mean(profits) if profits else 0
+            std_dev_profit_per_trade = np.std(profits) if len(profits) > 1 else 0 
+            
+            # Simple Sharpe Ratio (per trade, not annualized)
+            sharpe_ratio = mean_profit_per_trade / std_dev_profit_per_trade if std_dev_profit_per_trade != 0 else 0
+
+            metrics = {
+                "Total Profit": total_profit,
+                "Sharpe Ratio (Per Trade)": sharpe_ratio,
+                "Total Trades": len(trades),
+                "Mean Profit Per Trade": mean_profit_per_trade,
+                "Std Dev Profit Per Trade": std_dev_profit_per_trade
+            }
+
+            return trade_log, metrics
+
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Failed to process signals and calculate trade metrics")
+            
+            
